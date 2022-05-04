@@ -20,7 +20,7 @@ auth.post('/login', passport.authenticate('jwt'));
 
 auth.post('/logout', (req, res) => {
   req.logout();
-  res.redirect('/');
+  res.json({ success: true, message: 'Logged out' });
 });
 
 auth.get('/unauthorized', (req, res) => {
