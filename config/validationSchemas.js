@@ -3,7 +3,11 @@ const { body, validationResult } = require('express-validator');
 const validateResults = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    res.redirect('/');
+    return res.json({
+      success: false,
+      message: 'Validation failed',
+      errors: errors.array(),
+    });
   } else {
     next();
   }
@@ -17,4 +21,13 @@ const postValidation = [
     .escape(),
 ];
 
-module.exports = { validateResults, postValidation };
+const registerValidation = [
+  body('username').exists().trim().escape(),
+  body('password').exists(),
+  body('rpassword')
+    .custom((value, { req }) => value == req.body.password)
+    .withMessage('Passwords do not match')
+    .exists(),
+];
+
+module.exports = { validateResults, postValidation, registerValidation };
