@@ -6,8 +6,6 @@ const path = require('path');
 const express = require('express');
 const passport = require('./config/passport.js');
 require('./config/mongodb.js');
-const session = require('express-session');
-const MongoDBStore = require('connect-mongodb-session');
 
 // routes
 const indexRoute = require('./routes/index.js');
@@ -15,13 +13,7 @@ const authRoute = require('./routes/auth.js');
 const postsRoute = require('./routes/posts.js');
 const userRoute = require('./routes/users.js');
 
-const MongoStore = MongoDBStore(session);
-
 const app = express();
-
-const mongoStore = new MongoStore({
-  uri: process.env.MONGO_URI,
-});
 
 app.use(
   cors({
@@ -30,26 +22,24 @@ app.use(
     credentials: true,
   })
 );
-mongoStore.on('error', (error) => console.log(error));
-
-app.use(
-  session({
-    secret: process.env.STORE_SECRET,
-    cookie: { maxAge: 1000 * 60 * 60 * 24 * 14 },
-    store: mongoStore,
-    saveUninitialized: false,
-    resave: false,
-  })
-);
 
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(passport.authenticate('session'));
 
-app.use('/', indexRoute);
+// paths not requiring auth
 app.use('/', authRoute);
+
+app.use(
+  passport.authenticate('jwt', {
+    session: false,
+    failureRedirect: '/unauthorized',
+  })
+);
+
+// paths requiring auth
+app.use('/', indexRoute);
 app.use('/posts', postsRoute);
 app.use('/users', userRoute);
 
