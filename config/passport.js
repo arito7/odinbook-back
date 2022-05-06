@@ -16,9 +16,9 @@ const jwtStrat = new JwtStrategy(
         return done(err, false);
       }
       if (user) {
-        const { hash, ...rest } = user;
-        console.log(hash);
-        return done(null, user);
+        // dont make hash available beyond this point
+        const { hash, ...rest } = user._doc;
+        return done(null, rest);
       } else {
         return done(null, false);
       }
