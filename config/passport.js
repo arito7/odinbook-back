@@ -10,11 +10,14 @@ const jwtStrat = new JwtStrategy(
     secretOrKey: process.env.JWT_SECRET,
   },
   (payload, done) => {
-    User.findOne({ id: payload.sub }, (err, user) => {
+    console.log('payload user id is', payload.sub);
+    User.findById(payload.sub, (err, user) => {
       if (err) {
         return done(err, false);
       }
       if (user) {
+        const { hash, ...rest } = user;
+        console.log(hash);
         return done(null, user);
       } else {
         return done(null, false);
@@ -24,21 +27,6 @@ const jwtStrat = new JwtStrategy(
 );
 
 passport.use(jwtStrat);
-
-passport.serializeUser((user, done) => {
-  console.log('serializing user', user);
-  done(null, user._id);
-});
-
-passport.deserializeUser((id, done) => {
-  console.log('deserializing user', user);
-  User.findById(id).exec((err, user) => {
-    if (err) {
-      done(err, null);
-    }
-    done(null, user);
-  });
-});
 
 passport.jwtAuth = passport.authenticate('jwt', { session: false });
 
