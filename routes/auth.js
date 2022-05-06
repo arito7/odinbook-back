@@ -3,23 +3,81 @@ const passport = require('../config/passport.js');
 const User = require('../models/User');
 const auth = Router();
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const {
   registerValidation,
   validateResults,
 } = require('../config/validationSchemas');
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const { createDBErrorRes } = require('../helpers/resObjects');
 
-auth.get('/login/google', passport.authenticate('google'));
+/**
+ * Verifies google token authenticity
+ */
+async function verifyIdToken(idToken) {
+  const ticket = await client.verifyIdToken({
+    idToken,
+    audience: process.env.GOOGLE_CLIENT_ID,
+  });
 
-auth.get(
-  '/oauth2/redirect/google',
-  passport.authenticate('google', {
-    failureRedirect: 'http://localhost:3000/login',
-  }),
-  (req, res) => {
-    console.log(req.session);
-    res.redirect('http://localhost:3000');
-  }
-);
+  const payload = ticket.getPayload();
+  const userid = payload['sub'];
+  return userid;
+}
+
+auth.post('/login/google', async (req, res) => {
+  const userId = await verifyIdToken(req.body.tokenId);
+  User.find({ providerId: userId }).exec((err, user) => {
+    if (err) {
+      return res.json(createDBErrorRes(err));
+    }
+  });
+  res.json({ success: true });
+});
+
+auth.post('/register/google', async (req, res) => {
+  const userId = await verifyIdToken(req.body.tokenId);
+  User.findOne({ providerId: userId }).exec((err, user) => {
+    if (err) {
+      return res.json(createDBErrorRes(err));
+    }
+    if (user) {
+      console.log('User with this provider id already exists');
+      //user already exists log them in or return failure
+
+      const payload = { sub: user._id, iat: Date.now() };
+      const token = jwt.sign(payload, process.env.JWT_SECRET);
+      return res.json({
+        success: true,
+        message: 'User with this google account already exists',
+        token,
+      });
+    } else {
+      console.log('User does not exist, creating new');
+      // user with this google id doesn't exist yet so create one
+      const user = new User({
+        username: req.body.profileObj.name,
+        providerId: userId,
+        iconURI: req.body.profileObj.imageUrl,
+      });
+      user.save((err, user) => {
+        if (err) {
+          return res.json(createDBErrorRes(err));
+        }
+
+        const payload = { sub: user._id, iat: Date.now() };
+        const token = jwt.sign(payload, process.env.JWT_SECRET);
+        res.json({
+          success: true,
+          message: 'New user successfully created through google sign in',
+          token,
+          user,
+        });
+      });
+    }
+  });
+});
 
 auth.post('/logout', (req, res) => {
   req.session.destroy((err) => {
@@ -40,14 +98,9 @@ auth.get('/unauthorized', (req, res) => {
 });
 
 auth.post('/login', (req, res) => {
-  console.log('received login request');
   User.findOne({ username: req.body.username }).exec((err, user) => {
     if (err) {
-      return res.json({
-        success: false,
-        message: 'Database Error',
-        error: err.message,
-      });
+      return res.json(createDBErrorRes(err));
     }
     if (!user) {
       return res.json({ success: false, message: 'Username does not exist.' });
@@ -72,12 +125,7 @@ auth.post(
   (req, res, next) => {
     User.findOne({ username: req.body.username }).exec((err, user) => {
       if (err) {
-        res.status(500);
-        return res.json({
-          success: false,
-          message: 'Database Error',
-          error: err.message,
-        });
+        return res.json(createDBErrorRes(err));
       }
       // username is not taken so safe to create
       if (!user) {
@@ -96,11 +144,7 @@ auth.post(
         user.save((err, saved) => {
           if (err) {
             res.status(500);
-            return res.json({
-              success: false,
-              message: 'Database Error',
-              error: err.message,
-            });
+            return res.json(createDBErrorRes(err));
           }
           return res.json({
             success: true,
