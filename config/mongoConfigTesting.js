@@ -19,9 +19,7 @@ async function initializeMongoServer() {
     console.log(`MongoDB successfully connected to ${mongoUri}`);
   });
 
-  const disconnect = mongoose.disconnect;
-
-  return { disconnect };
+  return mongoose;
 }
 
 module.exports = initializeMongoServer;
