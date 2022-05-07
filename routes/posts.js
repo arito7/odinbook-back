@@ -1,11 +1,12 @@
 const Post = require('../models/Post');
-const User = require('../models/User.js');
+const User = require('../models/User');
 const { Router } = require('express');
 
 const {
   postValidation,
   validateResults,
 } = require('../config/validationSchemas');
+const { createDBErrorRes } = require('../helpers/resObjects');
 
 const posts = Router();
 
@@ -22,11 +23,7 @@ posts.post('/', postValidation, validateResults, (req, res, next) => {
 
     post.save((err, savedPost) => {
       if (err) {
-        return res.json({
-          success: false,
-          message: 'Database error.',
-          error: err.message,
-        });
+        return res.json(createDBErrorRes(err));
       }
       res.status(200);
       res.json({
@@ -46,6 +43,7 @@ posts.post('/', postValidation, validateResults, (req, res, next) => {
  * requesting user as well
  */
 posts.get('/', (req, res) => {
+  console.log(req.user);
   if (req.user) {
     Post.find({ creator: req.user._id })
       .populate('creator', 'username')
@@ -53,7 +51,7 @@ posts.get('/', (req, res) => {
       .limit(50)
       .exec((err, posts) => {
         if (err) {
-          console.log(err.message);
+          return res.json(createDBErrorRes(err));
         }
         return res.json({ success: true, posts });
       });
