@@ -1,5 +1,4 @@
 const { Router } = require('express');
-const passport = require('../config/passport.js');
 const User = require('../models/User');
 const auth = Router();
 const bcrypt = require('bcryptjs');
@@ -32,8 +31,23 @@ auth.post('/login/google', async (req, res) => {
     if (err) {
       return res.json(createDBErrorRes(err));
     }
+
+    if (user) {
+      const payload = { sub: user._id, iat: Date.now() };
+      const token = jwt.sign(payload, process.env.JWT_SECRET);
+      return res.json({
+        success: true,
+        message: 'Logged in via google',
+        user,
+        token,
+      });
+    } else {
+      return res.json({
+        success: false,
+        message: 'No account associated with this google account.',
+      });
+    }
   });
-  res.json({ success: true });
 });
 
 auth.post('/register/google', async (req, res) => {
@@ -92,12 +106,8 @@ auth.post('/logout', (req, res) => {
   });
 });
 
-auth.get('/unauthorized', (req, res) => {
-  // res.status(401);
-  res.json({ success: false, message: 'Unauthorized' });
-});
-
 auth.post('/login', (req, res) => {
+  console.log('receiving post login request');
   User.findOne({ username: req.body.username }).exec((err, user) => {
     if (err) {
       return res.json(createDBErrorRes(err));
@@ -143,13 +153,15 @@ auth.post(
 
         user.save((err, saved) => {
           if (err) {
-            res.status(500);
             return res.json(createDBErrorRes(err));
           }
+          const payload = { sub: saved._id, iat: Date.now() };
+          const token = jwt.sign(payload, process.env.JWT_SECRET);
           return res.json({
             success: true,
             message: 'User Successfully created',
             user: saved,
+            token,
           });
         });
       } else {
@@ -161,5 +173,10 @@ auth.post(
     });
   }
 );
+
+auth.get('/unauthorized', (req, res) => {
+  // res.status(401);
+  res.json({ success: false, message: 'Unauthorized' });
+});
 
 module.exports = auth;
