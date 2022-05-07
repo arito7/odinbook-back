@@ -1,17 +1,13 @@
-const { Router, request } = require('express');
-const User = require('../models/User.js');
-const bcrypt = require('bcryptjs');
+const { Router } = require('express');
+const User = require('../models/User');
 const user = Router();
 const jwt = require('jsonwebtoken');
+const { createDBErrorRes } = require('../helpers/resObjects');
 const { jwtAuth, googleAuth } = require('../config/passport');
 require('dotenv').config();
 /**
  * root is /users
  */
-
-user.get('/', jwtAuth, (req, res, next) => {
-  res.send(req.user);
-});
 
 user.get('/me', (req, res) => {
   if (req.user) {
@@ -21,125 +17,41 @@ user.get('/me', (req, res) => {
   }
 });
 
-user.get('/:id', jwtAuth, (req, res, next) => {
-  User.findById(req.params.id).exec((err, user) => {
+user.get('/people', (req, res) => {
+  User.find({
+    _id: { $ne: req.user._id.toString() },
+    friendRequests: { $nin: [req.user._id.toString()] },
+  })
+    .limit(15)
+    .sort({ createdAt: -1 })
+    .exec((err, people) => {
+      res.json({ success: true, people: people.map((p) => p.toPublic) });
+    });
+});
+
+user.post('/request', (req, res) => {
+  User.findById(req.body.to).exec((err, user) => {
     if (err) {
-      res.status(500);
-      res.json({ message: 'Database Error' });
-    }
-    if (!user) {
-      res.status(500);
-      res.json({ message: 'User Not Found' });
-    } else {
-      res.status(200);
-      res.json({ user });
-    }
-  });
-});
-
-user.get('/logout', (req, res) => {
-  console.log(req.cookies);
-  console.log('receiving get request to logout');
-  res.clearCookie('sid');
-  res.json({ success: true });
-});
-
-user.post('/request', (req, res, next) => {
-  User.findById(req.body.id).exec((err, user) => {
-    if (err || !user) {
-      res.status(500);
-      res.json({ message: 'User Not Found' });
+      res.json(createDBErrorRes(err));
     }
     if (user) {
       // append current users id
-      user.friendRequests.push(req.user._id);
-      user.save((err) => {
-        if (err) {
-          return next(err);
-        }
-        res.status(200);
-        res.send();
-      });
-    }
-  });
-});
-
-user.post('/login', (req, res, next) => {
-  User.findOne({ username: req.body.username }).exec((err, user) => {
-    if (err) {
-      return res.json({
-        success: false,
-        message: 'Database Error',
-        error: err.message,
-      });
-    }
-    if (!user) {
-      return res.json({ success: false, message: 'Username does not exist.' });
-    } else {
-      bcrypt.compare(req.body.password, user.hash).then((match) => {
-        if (match) {
-          const payload = { sub: user._id, iat: Date.now() };
-          const token = jwt.sign(payload, process.env.JWT_SECRET);
-          res.json({ success: true, token, expiresIn: '14d', user });
-        } else {
-          res.json({ success: false, message: 'Incorrect login credentials' });
-        }
-      });
-    }
-  });
-});
-
-user.post('/register', (req, res, next) => {
-  User.findOne({ username: req.body.username }).exec((err, user) => {
-    if (err) {
-      res.status(500);
-      return res.json({
-        success: false,
-        message: 'Database Error',
-        error: err.message,
-      });
-    }
-    // username is not taken so safe to create
-    if (!user) {
-      const salt = bcrypt.genSaltSync(10);
-      const hash = bcrypt.hashSync(req.body.password, salt);
-
-      const user = User({
-        username: req.body.username,
-        hash: hash,
-        name: {
-          first: req.body.firstname,
-          last: req.body.lastname,
-        },
-      });
-
+      if (
+        user.friendRequests.find((r) => r == req.user._id.toString()) === -1
+      ) {
+        user.friendRequests.push(req.user._id.toString());
+      }
       user.save((err, saved) => {
+        console.log(saved);
         if (err) {
-          res.status(500);
-          return res.json({
-            success: false,
-            message: 'Database Error',
-            error: err.message,
-          });
+          return res.json(createDBErrorRes(err));
         }
-        return res.json({
-          success: false,
-          message: 'User Successfully created',
-          user: saved,
-        });
+        res.json({ success: true });
       });
     } else {
-      return res.json({
-        success: false,
-        message: `Username '${req.body.username}' is in use`,
-      });
+      res.json({ success: false, message: 'User not found.' });
     }
   });
-});
-
-user.get('/request/:id', (req, res, next) => {
-  console.log(req.params.id);
-  res.send();
 });
 
 user.get('/authtest', jwtAuth, (req, res, next) => {
