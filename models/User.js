@@ -18,4 +18,9 @@ const UserSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+UserSchema.virtual('toPublic').get(function () {
+  const obj = this.toObject();
+  delete obj.hash;
+  return obj;
+});
 module.exports = mongoose.model('User', UserSchema);
