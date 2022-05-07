@@ -21,6 +21,7 @@ const UserSchema = new mongoose.Schema(
 UserSchema.virtual('toPublic').get(function () {
   const obj = this.toObject();
   delete obj.hash;
+  delete obj.friendRequests;
   return obj;
 });
 module.exports = mongoose.model('User', UserSchema);
