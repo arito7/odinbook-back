@@ -11,18 +11,21 @@ const jwtStrat = new JwtStrategy(
   },
   (payload, done) => {
     console.log('payload user id is', payload.sub);
-    User.findById(payload.sub, (err, user) => {
-      if (err) {
-        return done(err, false);
-      }
-      if (user) {
-        // dont make hash available beyond this point
-        const { hash, ...rest } = user._doc;
-        return done(null, rest);
-      } else {
-        return done(null, false);
-      }
-    });
+    User.findById(payload.sub)
+      .populate('friendRequests')
+      .exec((err, user) => {
+        if (err) {
+          return done(err, false);
+        }
+        if (user) {
+          // dont make hash available beyond this point
+          const { hash, providerId, ...rest } = user._doc;
+          rest.friendRequests = rest.friendRequests.map((r) => r.toPublic);
+          return done(null, rest);
+        } else {
+          return done(null, false);
+        }
+      });
   }
 );
 
