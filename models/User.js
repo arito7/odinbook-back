@@ -4,9 +4,13 @@ const UserSchema = new mongoose.Schema(
   {
     username: { type: String, length: { min: 5, max: 20 }, required: true },
     hash: { type: String },
-    iconURI: { type: String },
+    iconUrl: { type: String },
     providerId: { type: String },
     friendRequests: {
+      type: [{ type: mongoose.Types.ObjectId, ref: 'User' }],
+      default: [],
+    },
+    pendingRequests: {
       type: [{ type: mongoose.Types.ObjectId, ref: 'User' }],
       default: [],
     },
@@ -22,6 +26,12 @@ UserSchema.virtual('toPublic').get(function () {
   const obj = this.toObject();
   delete obj.hash;
   delete obj.friendRequests;
+  delete obj.pendingRequests;
+  return obj;
+});
+UserSchema.virtual('withoutHash').get(function () {
+  const obj = this.toObject();
+  delete obj.hash;
   return obj;
 });
 module.exports = mongoose.model('User', UserSchema);
