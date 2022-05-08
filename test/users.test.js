@@ -110,10 +110,10 @@ describe('/me', () => {
   });
 });
 
-describe('/request', () => {
+describe('/requests', () => {
   it('create a new friend request', (done) => {
     request(app)
-      .post('/users/request')
+      .post('/users/requests')
       .set('Authorization', `Bearer ${users[0].token}`)
       .send({ to: users[1].id })
       .end((err, res) => {
@@ -129,7 +129,7 @@ describe('/request', () => {
 
   it('if request is already sent will not push another request from same user', (done) => {
     request(app)
-      .post('/users/request')
+      .post('/users/requests')
       .set('Authorization', `Bearer ${users[0].token}`)
       .send({ to: users[1].id })
       .end((err, res) => {
@@ -144,7 +144,7 @@ describe('/request', () => {
 
   it('user A that has received a request from user B cannot request back', (done) => {
     request(app)
-      .post('/users/request')
+      .post('/users/requests')
       .set('Authorization', `Bearer ${users[1].token}`)
       .send({ to: users[0].id })
       .end((err, res) => {
@@ -161,7 +161,7 @@ describe('/request', () => {
 describe('/accept', () => {
   it('accepts a friend request', (done) => {
     request(app)
-      .post('/users/accept')
+      .post('/users/requests/accept')
       .set('Authorization', `Bearer ${users[1].token}`)
       .send({ from: users[0].id })
       .end((err, res) => {
@@ -203,7 +203,7 @@ describe('GET /requests', () => {
   // user0 should not have any requests at this point
   it('user with no request return empty arrays', (done) => {
     request(app)
-      .get('/users/request')
+      .get('/users/requests')
       .set('Authorization', `Bearer ${users[0].token}`)
       .end((err, res) => {
         if (err) done(err);
@@ -218,7 +218,7 @@ describe('GET /requests', () => {
   // user0 requests should contain user4
   it('test requests', (done) => {
     request(app)
-      .post('/users/request')
+      .post('/users/requests')
       .set('Authorization', `Bearer ${users[4].token}`)
       .send({ to: users[0].id })
       .end((err) => {
@@ -226,7 +226,7 @@ describe('GET /requests', () => {
           done(err);
         }
         request(app)
-          .get('/users/request')
+          .get('/users/requests')
           .set('Authorization', `Bearer ${users[0].token}`)
           .end((err, res) => {
             if (err) {
@@ -249,7 +249,7 @@ describe('GET /requests', () => {
     // users 4 has a pending request that was send the test before
     request(app);
     request(app)
-      .get('/users/request')
+      .get('/users/requests')
       .set('Authorization', `Bearer ${users[4].token}`)
       .end((err, res) => {
         if (err) {

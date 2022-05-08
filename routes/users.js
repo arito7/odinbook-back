@@ -32,7 +32,7 @@ users.get('/people', (req, res) => {
     });
 });
 
-users.get('/request', (req, res) => {
+users.get('/requests', (req, res) => {
   async.parallel(
     {
       requests: (cb) => {
@@ -67,7 +67,7 @@ users.get('/request', (req, res) => {
 });
 
 // do some validation
-users.post('/request', (req, res) => {
+users.post('/requests', (req, res) => {
   if (req.body.to) {
     FriendRequest.findOne({
       $or: [
@@ -105,7 +105,7 @@ users.post('/request', (req, res) => {
   }
 });
 
-users.post('/accept', (req, res) => {
+users.post('/requests/accept', (req, res) => {
   if (req.body.from) {
     FriendRequest.findOne({ to: req.user._id, from: req.body.from })
       .populate('from')
