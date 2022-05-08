@@ -32,6 +32,41 @@ users.get('/people', (req, res) => {
     });
 });
 
+users.get('/request', (req, res) => {
+  async.parallel(
+    {
+      requests: (cb) => {
+        FriendRequest.find({ to: req.user._id })
+          .populate('from', ['username', 'iconUrl'])
+          .exec((err, requests) => {
+            if (err) cb(err);
+            if (!requests) cb(null, []);
+            cb(null, requests);
+          });
+      },
+      pendingRequests: (cb) => {
+        FriendRequest.find({ from: req.user._id })
+          .populate('to', ['username', 'iconUrl'])
+          .exec((err, requests) => {
+            if (err) cb(err);
+            if (!requests) cb(null, []);
+            cb(null, requests);
+          });
+      },
+    },
+    (err, results) => {
+      if (err) return res.json(createDBErrorRes(err));
+      return res.json(
+        createSuccessRes('Successfully retreived user requests', {
+          requests: results.requests,
+          pendingRequests: results.pendingRequests,
+        })
+      );
+    }
+  );
+});
+
+// do some validation
 users.post('/request', (req, res) => {
   if (req.body.to) {
     FriendRequest.findOne({
@@ -42,10 +77,7 @@ users.post('/request', (req, res) => {
     }).exec((err, fr) => {
       if (err) return res.json(createDBErrorRes(err));
       if (fr) {
-        return res.json({
-          success: false,
-          message: 'There is a preexisting request',
-        });
+        return res.json(createFailRes('There is a preexisting request'));
       } else {
         console.log('Creating new friend request');
         // request does not exist so safe to create one
@@ -56,20 +88,20 @@ users.post('/request', (req, res) => {
         newFr.save((err, savedFr) => {
           if (err) return res.json(createDBErrorRes(err));
           console.log(savedFr);
-          return res.json({
-            success: true,
-            message: 'Successfully made request',
-            friendRequest: savedFr,
-          });
+          return res.json(
+            createSuccessRes('Successfully made request', {
+              friendRequest: savedFr,
+            })
+          );
         });
       }
     });
   } else {
-    return res.json({
-      success: false,
-      message:
-        'Make sure the request body follows the body format {to: <UserId>}.',
-    });
+    return res.json(
+      createFailRes(
+        'Make sure the request body follows the body format {to: <UserId>}.'
+      )
+    );
   }
 });
 
@@ -81,9 +113,7 @@ users.post('/accept', (req, res) => {
       .exec((err, fr) => {
         if (err) return res.json(createDBErrorRes(err));
         if (!fr) {
-          return res.json(
-            createGenericRes(false, 'This is not a valid request')
-          );
+          return res.json(createFailRes('This is not a valid request'));
         } else {
           console.log('Found following request', fr);
           Promise.all([
@@ -110,7 +140,6 @@ users.post('/accept', (req, res) => {
   } else {
     return res.json(
       createFailRes(
-        false,
         `Make sure your request body follows the format {from: <ID of requesting user>}.`
       )
     );
