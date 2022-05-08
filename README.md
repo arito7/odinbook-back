@@ -2,6 +2,14 @@
 
 A restful api created to for the OdinBook Project
 
+---
+
+### Endpoint
+```
+endpoint goes here
+```
+---
+
 ### Authentication
 
 Attach JWT to header as Bearer token
@@ -9,6 +17,8 @@ Attach JWT to header as Bearer token
 ```
 Authorization: Bearer <Token>
 ```
+
+---
 
 ### Response
 
@@ -25,13 +35,14 @@ Response will always be in following format
 }
 ```
 
+---
+
 ### API
 
-| Root: `/users` |
-| -------------- | ------------------ | -------------------------------------- | ---------------------------- |
+#### Root: `/users` 
 | Method         | Route              | Description                            | Body Format                  |
 | ------         | ------------------ | -------------------------------------- | ---------------------------- |
-| `POST`         | `/requests`        | Send a request to another user         | `{to: \<ID of target user>}` |
-| `POST`         | `/requests/accept` | Accept a request from another user     | `{from: \<ID of requester>}` |
+| `POST`         | `/requests`        | Send a request to another user         | `{to: <ID of target user>}` |
+| `POST`         | `/requests/accept` | Accept a request from another user     | `{from: <ID of requester>}` |
 | `GET`          | `/requests`        | Get current users requests             |                              |
 | `GET`          | `/people`          | Get people who have recently signed up |                              |
