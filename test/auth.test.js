@@ -3,14 +3,27 @@ const express = require('express');
 const authRoute = require('../routes/auth');
 const app = express();
 const expect = require('chai').expect;
-
-require('mocha');
-require('../config/mongoConfigTesting')();
+const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
+const { before, after } = require('mocha');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use('/', authRoute);
+
+let mongoServer;
+
+before(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
+});
+
+after(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
 
 describe('/register', () => {
   it('works with proper request', (done) => {
