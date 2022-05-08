@@ -1,11 +1,10 @@
-const { Router, json } = require('express');
+const { Router } = require('express');
 const async = require('async');
 const User = require('../models/User');
 const FriendRequest = require('../models/FriendRequest');
 const users = Router();
 const {
   createDBErrorRes,
-  createGenericRes,
   createFailRes,
   createSuccessRes,
 } = require('../helpers/resObjects');
