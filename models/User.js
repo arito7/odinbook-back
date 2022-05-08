@@ -6,14 +6,6 @@ const UserSchema = new mongoose.Schema(
     hash: { type: String },
     iconUrl: { type: String },
     providerId: { type: String },
-    friendRequests: {
-      type: [{ type: mongoose.Types.ObjectId, ref: 'User' }],
-      default: [],
-    },
-    pendingRequests: {
-      type: [{ type: mongoose.Types.ObjectId, ref: 'User' }],
-      default: [],
-    },
     friends: {
       type: [{ type: mongoose.Types.ObjectId, ref: 'User' }],
       default: [],
@@ -25,10 +17,9 @@ const UserSchema = new mongoose.Schema(
 UserSchema.virtual('toPublic').get(function () {
   const obj = this.toObject();
   delete obj.hash;
-  delete obj.friendRequests;
-  delete obj.pendingRequests;
   return obj;
 });
+
 UserSchema.virtual('withoutHash').get(function () {
   const obj = this.toObject();
   delete obj.hash;

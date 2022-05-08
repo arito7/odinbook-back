@@ -12,8 +12,6 @@ const jwtStrat = new JwtStrategy(
   (payload, done) => {
     console.log('payload user id is', payload.sub);
     User.findById(payload.sub)
-      .populate('friendRequests', ['username', 'iconUrl'])
-      .populate('pendingRequests', ['username', 'iconUrl'])
       .populate('friends', ['username', 'iconUrl'])
       .exec((err, user) => {
         if (err) {
