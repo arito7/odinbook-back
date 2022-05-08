@@ -110,7 +110,7 @@ describe('/me', () => {
 });
 
 describe('/request', () => {
-  it('friend request pushes id of requester to requested', (done) => {
+  it('create a new friend request', (done) => {
     request(app)
       .post('/users/request')
       .set('Authorization', `Bearer ${users[0].token}`)
@@ -120,10 +120,8 @@ describe('/request', () => {
           done(err);
         }
         expect(res.body.success).to.equal(true);
-        expect(res.body.user.pendingRequests[0].username).to.equal(
-          users[1].username
-        );
-        expect(res.body.user).to.not.haveOwnProperty('hash');
+        expect(res.body.friendRequest.from).to.equal(users[0].id);
+        expect(res.body.friendRequest.to).to.equal(users[1].id);
         done();
       });
   });
@@ -137,11 +135,8 @@ describe('/request', () => {
         if (err) {
           done(err);
         }
-        console.log(res.body);
         expect(res.body.success).to.equal(false);
-        expect(res.body.error).to.equal(
-          'Friend request has already been sent to this user'
-        );
+        expect(res.body.message).to.equal('There is a preexisting request');
         done();
       });
   });
@@ -155,10 +150,26 @@ describe('/request', () => {
         if (err) {
           done(err);
         }
-        console.log(res.body);
         expect(res.body.success).to.equal(false);
-        expect(res.body.error).to.equal(
-          'Friend request has already been sent to this user'
+        expect(res.body.message).to.equal('There is a preexisting request');
+        done();
+      });
+  });
+});
+
+describe('/accept', () => {
+  it('accepts a friend request', (done) => {
+    request(app)
+      .post('/users/accept')
+      .set('Authorization', `Bearer ${users[1].token}`)
+      .send({ from: users[0].id })
+      .end((err, res) => {
+        if (err) {
+          done(err);
+        }
+        expect(res.body.success).to.equal(true);
+        expect(res.body.message).to.equal(
+          'Successfully accepted friend request'
         );
         done();
       });
