@@ -108,25 +108,39 @@ auth.post('/logout', (req, res) => {
 });
 
 auth.post('/login', (req, res) => {
-  console.log('receiving post login request');
-  User.findOne({ username: req.body.username }).exec((err, user) => {
-    if (err) {
-      return res.json(createDBErrorRes(err));
-    }
-    if (!user) {
-      return res.json({ success: false, message: 'Username does not exist.' });
-    } else {
-      bcrypt.compare(req.body.password, user.hash).then((match) => {
-        if (match) {
-          const payload = { sub: user._id, iat: Date.now() };
-          const token = jwt.sign(payload, process.env.JWT_SECRET);
-          res.json({ success: true, token, expiresIn: '14d', user });
-        } else {
-          res.json({ success: false, message: 'Incorrect login credentials' });
-        }
-      });
-    }
-  });
+  User.findOne({ username: req.body.username })
+    .populate('friendRequests', ['username', 'iconUrl'])
+    .populate('pendingRequests', ['username', 'iconUrl'])
+    .populate('friends', ['username', 'iconUrl'])
+    .exec((err, user) => {
+      if (err) {
+        return res.json(createDBErrorRes(err));
+      }
+      if (!user) {
+        return res.json({
+          success: false,
+          message: 'Username does not exist.',
+        });
+      } else {
+        bcrypt.compare(req.body.password, user.hash).then((match) => {
+          if (match) {
+            const payload = { sub: user._id, iat: Date.now() };
+            const token = jwt.sign(payload, process.env.JWT_SECRET);
+            res.json({
+              success: true,
+              token,
+              expiresIn: '14d',
+              user: user.withoutHash,
+            });
+          } else {
+            res.json({
+              success: false,
+              message: 'Incorrect login credentials',
+            });
+          }
+        });
+      }
+    });
 });
 
 auth.post('/register', registerValidation, validateResults, (req, res) => {
