@@ -12,10 +12,17 @@ Authorization: Bearer <Token>
 
 ### Response
 
+Responses will always return a status code of 200 regardless of result, unless a serverside error causes otherwise.
+
 Response will always be in following format
 
 ```
-{success: boolean, message?: if applicable, error?: if applicable, ...additionalData?: if applicable}
+{
+  success: boolean
+  [,message?: if applicable]
+  [,error?: if applicable]
+  [, ...additionalData?: if applicable]
+}
 ```
 
 API
