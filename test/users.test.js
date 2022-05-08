@@ -33,49 +33,37 @@ let users = [
   { id: '', username: 'tester1', password: 'tester1', token: '' },
   { id: '', username: 'tester2', password: 'tester2', token: '' },
   { id: '', username: 'tester3', password: 'tester3', token: '' },
+  { id: '', username: 'tester4', password: 'tester4', token: '' },
+  { id: '', username: 'tester5', password: 'tester5', token: '' },
+  { id: '', username: 'tester6', password: 'tester6', token: '' },
 ];
 before(async () => {
   mongoServer = await MongoMemoryServer.create();
   const mongoUri = mongoServer.getUri();
   await mongoose.connect(mongoUri);
   // set up users to be used in tests
-  await Promise.all([
-    request(app)
-      .post('/register')
-      .send({
-        username: users[0].username,
-        password: users[0].password,
-        rpassword: users[0].password,
+  const createUserPromises = [];
+
+  for (let i = 0; i < users.length; i += 1) {
+    createUserPromises.push(
+      new Promise((resolve, reject) => {
+        request(app)
+          .post('/register')
+          .send({
+            username: users[i].username,
+            password: users[i].password,
+            rpassword: users[i].password,
+          })
+          .then((res) => {
+            users[i].token = res.body.token;
+            users[i].id = res.body.user._id;
+            resolve();
+          })
+          .catch((err) => reject(err));
       })
-      .then((res) => {
-        users[0].token = res.body.token;
-        users[0].id = res.body.user._id;
-      }),
-    request(app)
-      .post('/register')
-      .send({
-        username: users[1].username,
-        password: users[1].password,
-        rpassword: users[1].password,
-      })
-      .then((res) => {
-        users[1].token = res.body.token;
-        users[1].id = res.body.user._id;
-        console.log(users[1].id);
-      }),
-    request(app)
-      .post('/register')
-      .send({
-        username: users[2].username,
-        password: users[2].password,
-        rpassword: users[2].password,
-      })
-      .then((res) => {
-        users[2].token = res.body.token;
-        users[2].id = res.body.user._id;
-        console.log(users[2].id);
-      }),
-  ]);
+    );
+  }
+  await Promise.all(createUserPromises);
 });
 
 after(async () => {
@@ -85,7 +73,7 @@ after(async () => {
 });
 
 describe('/me', () => {
-  it('get user data back w/ valid token', (done) => {
+  it('abel to get user data back w/ valid token', (done) => {
     request(app)
       .get('/users/me')
       .set('Authorization', `Bearer ${users[0].token}`)
@@ -104,7 +92,7 @@ describe('/me', () => {
       });
   });
 
-  it('request fails w/ invalid token', (done) => {
+  it('unable to get user data w/ an invalid token', (done) => {
     request(app)
       .get('/users/me')
       .set('Authorization', 'Bearer notarealtoken')
@@ -206,6 +194,76 @@ describe('/people', () => {
             undefined
           );
           done();
+        }
+      });
+  });
+});
+
+describe('GET /requests', () => {
+  // user0 should not have any requests at this point
+  it('user with no request return empty arrays', (done) => {
+    request(app)
+      .get('/users/request')
+      .set('Authorization', `Bearer ${users[0].token}`)
+      .end((err, res) => {
+        if (err) done(err);
+        expect(res.body.success).equal(true);
+        expect(res.body.pendingRequests).length(0);
+        expect(res.body.requests).length(0);
+        done();
+      });
+  });
+
+  // send a request from user4 to user0
+  // user0 requests should contain user4
+  it('test requests', (done) => {
+    request(app)
+      .post('/users/request')
+      .set('Authorization', `Bearer ${users[4].token}`)
+      .send({ to: users[0].id })
+      .end((err) => {
+        if (err) {
+          done(err);
+        }
+        request(app)
+          .get('/users/request')
+          .set('Authorization', `Bearer ${users[0].token}`)
+          .end((err, res) => {
+            if (err) {
+              done(err);
+            }
+            try {
+              expect(res.body.success).equal(true);
+              expect(res.body.requests).length(1);
+              expect(res.body.requests[0].from.username).equal(
+                users[4].username
+              );
+              done();
+            } catch (error) {
+              done(error);
+            }
+          });
+      });
+  });
+  it('test pending requests', (done) => {
+    // users 4 has a pending request that was send the test before
+    request(app);
+    request(app)
+      .get('/users/request')
+      .set('Authorization', `Bearer ${users[4].token}`)
+      .end((err, res) => {
+        if (err) {
+          done(err);
+        }
+        try {
+          expect(res.body.success).equal(true);
+          expect(res.body.pendingRequests).length(1);
+          expect(res.body.pendingRequests[0].to.username).equal(
+            users[0].username
+          );
+          done();
+        } catch (error) {
+          done(error);
         }
       });
   });
