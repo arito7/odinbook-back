@@ -25,6 +25,9 @@ users.get('/people', (req, res) => {
     .limit(15)
     .sort({ createdAt: -1 })
     .exec((err, people) => {
+      if (err) {
+        return res.json(createDBErrorRes(err));
+      }
       res.json({ success: true, people: people.map((p) => p.toPublic) });
     });
 });
