@@ -32,6 +32,7 @@ app.use('/users', usersRoute);
 let users = [
   { id: '', username: 'tester1', password: 'tester1', token: '' },
   { id: '', username: 'tester2', password: 'tester2', token: '' },
+  { id: '', username: 'tester3', password: 'tester3', token: '' },
 ];
 before(async () => {
   mongoServer = await MongoMemoryServer.create();
@@ -61,6 +62,18 @@ before(async () => {
         users[1].token = res.body.token;
         users[1].id = res.body.user._id;
         console.log(users[1].id);
+      }),
+    request(app)
+      .post('/register')
+      .send({
+        username: users[2].username,
+        password: users[2].password,
+        rpassword: users[2].password,
+      })
+      .then((res) => {
+        users[2].token = res.body.token;
+        users[2].id = res.body.user._id;
+        console.log(users[2].id);
       }),
   ]);
 });
@@ -172,6 +185,28 @@ describe('/accept', () => {
           'Successfully accepted friend request'
         );
         done();
+      });
+  });
+});
+
+describe('/people', () => {
+  it('doesnt include friends', (done) => {
+    // user 0 is friends with user 1 at this point
+    // so res.body.people is expected to exclude user1
+    request(app)
+      .get('/users/people')
+      .set('Authorization', `Bearer ${users[0].token}`)
+      .end((err, res) => {
+        if (err) {
+          done(err);
+        } else {
+          console.log(res.body);
+          expect(res.body.success).equal(true);
+          expect(res.body.people.find((i) => i._id === users[1].id)).to.equal(
+            undefined
+          );
+          done();
+        }
       });
   });
 });
