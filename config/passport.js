@@ -12,16 +12,16 @@ const jwtStrat = new JwtStrategy(
   (payload, done) => {
     console.log('payload user id is', payload.sub);
     User.findById(payload.sub)
-      .populate('friendRequests')
+      .populate('friendRequests', ['username', 'iconUrl'])
+      .populate('pendingRequests', ['username', 'iconUrl'])
+      .populate('friends', ['username', 'iconUrl'])
       .exec((err, user) => {
         if (err) {
           return done(err, false);
         }
         if (user) {
           // dont make hash available beyond this point
-          const { hash, providerId, ...rest } = user._doc;
-          rest.friendRequests = rest.friendRequests.map((r) => r.toPublic);
-          return done(null, rest);
+          return done(null, user.withoutHash);
         } else {
           return done(null, false);
         }
