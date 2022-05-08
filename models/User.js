@@ -25,4 +25,29 @@ UserSchema.virtual('withoutHash').get(function () {
   delete obj.hash;
   return obj;
 });
-module.exports = mongoose.model('User', UserSchema);
+
+UserSchema.methods.addFriend = async function (id) {
+  if (!this.friends.find((i) => i == id)) {
+    return new Promise((res, rej) => {
+      UserModel.findById(this._id).exec((err, user) => {
+        if (err) {
+          res(err);
+        }
+        user.friends.push(id);
+        user.save((err, savedUser) => {
+          if (err) {
+            res(err);
+          }
+          res(savedUser);
+        });
+      });
+    });
+  } else
+    return Promise.resolve(
+      new Error(`${id} is already a friend for ${this._id}`)
+    );
+};
+
+const UserModel = mongoose.model('User', UserSchema);
+
+module.exports = UserModel;
