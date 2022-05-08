@@ -1,15 +1,13 @@
 const { Router } = require('express');
 const User = require('../models/User');
-const user = Router();
-const jwt = require('jsonwebtoken');
+const users = Router();
 const { createDBErrorRes } = require('../helpers/resObjects');
-const { jwtAuth, googleAuth } = require('../config/passport');
 require('dotenv').config();
 /**
  * root is /users
  */
 
-user.get('/me', (req, res) => {
+users.get('/me', (req, res) => {
   if (req.user) {
     res.json({ success: true, user: req.user });
   } else {
@@ -17,7 +15,7 @@ user.get('/me', (req, res) => {
   }
 });
 
-user.get('/people', (req, res) => {
+users.get('/people', (req, res) => {
   User.find({
     _id: { $ne: req.user._id.toString() },
     friendRequests: { $nin: [req.user._id.toString()] },
@@ -29,7 +27,7 @@ user.get('/people', (req, res) => {
     });
 });
 
-user.post('/request', (req, res) => {
+users.post('/request', (req, res) => {
   User.findById(req.body.to).exec((err, user) => {
     if (err) {
       res.json(createDBErrorRes(err));
@@ -54,7 +52,7 @@ user.post('/request', (req, res) => {
   });
 });
 
-user.get('/authtest', jwtAuth, (req, res, next) => {
+users.get('/authtest', (req, res, next) => {
   res.json({
     success: true,
     message: 'Authenticated JWT Token',
@@ -62,4 +60,4 @@ user.get('/authtest', jwtAuth, (req, res, next) => {
   });
 });
 
-module.exports = user;
+module.exports = users;
