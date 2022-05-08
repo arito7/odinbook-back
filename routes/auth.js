@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { Router } = require('express');
 const User = require('../models/User');
 const auth = Router();
@@ -128,51 +129,46 @@ auth.post('/login', (req, res) => {
   });
 });
 
-auth.post(
-  '/register',
-  registerValidation,
-  validateResults,
-  (req, res, next) => {
-    User.findOne({ username: req.body.username }).exec((err, user) => {
-      if (err) {
-        return res.json(createDBErrorRes(err));
-      }
-      // username is not taken so safe to create
-      if (!user) {
-        const salt = bcrypt.genSaltSync(10);
-        const hash = bcrypt.hashSync(req.body.password, salt);
+auth.post('/register', registerValidation, validateResults, (req, res) => {
+  User.findOne({ username: req.body.username }).exec((err, user) => {
+    if (err) {
+      return res.json(createDBErrorRes(err));
+    }
+    // username is not taken so safe to create
+    if (!user) {
+      const salt = bcrypt.genSaltSync(10);
+      const hash = bcrypt.hashSync(req.body.password, salt);
 
-        const user = User({
-          username: req.body.username,
-          hash: hash,
-          name: {
-            first: req.body.firstname,
-            last: req.body.lastname,
-          },
-        });
+      const user = User({
+        username: req.body.username,
+        hash: hash,
+        name: {
+          first: req.body.firstname,
+          last: req.body.lastname,
+        },
+      });
 
-        user.save((err, saved) => {
-          if (err) {
-            return res.json(createDBErrorRes(err));
-          }
-          const payload = { sub: saved._id, iat: Date.now() };
-          const token = jwt.sign(payload, process.env.JWT_SECRET);
-          return res.json({
-            success: true,
-            message: 'User Successfully created',
-            user: saved,
-            token,
-          });
-        });
-      } else {
+      user.save((err, saved) => {
+        if (err) {
+          return res.json(createDBErrorRes(err));
+        }
+        const payload = { sub: saved._id, iat: Date.now() };
+        const token = jwt.sign(payload, process.env.JWT_SECRET);
         return res.json({
-          success: false,
-          message: `Username '${req.body.username}' is in use`,
+          success: true,
+          message: 'User Successfully created',
+          user: saved,
+          token,
         });
-      }
-    });
-  }
-);
+      });
+    } else {
+      return res.json({
+        success: false,
+        message: `Username '${req.body.username}' is in use`,
+      });
+    }
+  });
+});
 
 auth.get('/unauthorized', (req, res) => {
   // res.status(401);
