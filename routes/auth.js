@@ -10,7 +10,11 @@ const {
 } = require('../config/validationSchemas');
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-const { createDBErrorRes } = require('../helpers/resObjects');
+const {
+  createDBErrorRes,
+  createSuccessRes,
+  createFailRes,
+} = require('../helpers/resObjects');
 
 /**
  * Verifies google token authenticity
@@ -109,34 +113,25 @@ auth.post('/logout', (req, res) => {
 
 auth.post('/login', (req, res) => {
   User.findOne({ username: req.body.username })
-    .populate('friendRequests', ['username', 'iconUrl'])
-    .populate('pendingRequests', ['username', 'iconUrl'])
     .populate('friends', ['username', 'iconUrl'])
     .exec((err, user) => {
-      if (err) {
-        return res.json(createDBErrorRes(err));
-      }
+      if (err) return res.json(createDBErrorRes(err));
       if (!user) {
-        return res.json({
-          success: false,
-          message: 'Username does not exist.',
-        });
+        return res.json(createFailRes('Username does not exist.'));
       } else {
         bcrypt.compare(req.body.password, user.hash).then((match) => {
           if (match) {
             const payload = { sub: user._id, iat: Date.now() };
             const token = jwt.sign(payload, process.env.JWT_SECRET);
-            res.json({
-              success: true,
-              token,
-              expiresIn: '14d',
-              user: user.withoutHash,
-            });
+            res.json(
+              createSuccessRes('Successfully authenticated user', {
+                token,
+                expiresIn: '14d',
+                user: user.withoutHash,
+              })
+            );
           } else {
-            res.json({
-              success: false,
-              message: 'Incorrect login credentials',
-            });
+            res.json(createFailRes(false, 'Incorrect login credentials'));
           }
         });
       }
